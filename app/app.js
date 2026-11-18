@@ -42,6 +42,8 @@
     busy: {}
   };
 
+  S.listCols = S.cols;
+
   var $ = function (id) { return document.getElementById(id); };
   var el = {
     setup: $('setup'), dashboard: $('dashboard'), detail: $('detail'),
@@ -55,6 +57,7 @@
     detailAttrs: $('detail-attrs'), pagesList: $('pages-list'),
     setServer: $('set-server'), setCols: $('set-cols'), setStatus: $('set-status'),
     idleTime: $('idle-time'), idleDate: $('idle-date'), idleWeather: $('idle-weather'),
+    carTitle: $('car-title'), carSub: $('car-sub'), carCards: $('car-cards'), carDetails: $('car-details'),
     toast: $('toast')
   };
 
@@ -178,12 +181,33 @@
   var DOMAIN_ORDER = ['light', 'switch', 'scene', 'script', 'climate', 'media_player',
     'cover', 'lock', 'fan', 'input_boolean', 'automation', 'sensor', 'binary_sensor'];
 
-  var DOMAIN_NAME = {
-    light: 'Luzes', switch: 'Tomadas', scene: 'Cenas', script: 'Scripts',
-    climate: 'Clima', media_player: 'Mídia', cover: 'Persianas', lock: 'Fechaduras',
-    fan: 'Ventiladores', input_boolean: 'Interruptores', automation: 'Automações',
-    sensor: 'Sensores', binary_sensor: 'Sensores'
-  };
+  var AREA_RULES = [
+    ['Varanda', /varanda/],
+    ['Suíte', /su[ií]te|suite/],
+    ['Quarto', /quarto/],
+    ['Cozinha', /cozinha|pia|lavanderia|kitchen/],
+    ['Sala', /\bsala\b/],
+    ['Banheiro', /banheiro/],
+    ['Hall', /\bhall\b/],
+    ['Carro', /carro|song.?plus|\bbyd\b|renegade|\btita\b/],
+    ['Energia', /solar/],
+    ['Limpeza', /alfred|terezinha|aspirador|\brobo\b/],
+    ['Rede', /roteador|router|tp.?link|pi.?hole|pihole|\bwifi\b|starlink/]
+  ];
+
+  function normArea(s) {
+    return String(s || '').toLowerCase()
+      .replace(/[áàãâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[íìîï]/g, 'i')
+      .replace(/[óòõôö]/g, 'o').replace(/[úùûü]/g, 'u').replace(/ç/g, 'c');
+  }
+
+  function areaOfEntity(e) {
+    var text = normArea(e.entity_id + ' ' + ((e.attributes && e.attributes.friendly_name) || ''));
+    for (var i = 0; i < AREA_RULES.length; i++) {
+      if (AREA_RULES[i][1].test(text)) return AREA_RULES[i][0];
+    }
+    return 'Outros';
+  }
 
   function isUsable(e) {
     if (!e || !e.entity_id) return false;
@@ -210,27 +234,45 @@
     S.order = Object.keys(S.entities).sort();
   }
 
-  function pageSize() { return S.cols * 3; }
+  function pageSize() { return S.cols * 7; }
 
   function autoPages() {
     var includeSensors = !!(S.config && S.config.includeSensors);
-    var domains = DOMAIN_ORDER.filter(function (d) {
-      if ((d === 'sensor' || d === 'binary_sensor') && !includeSensors) return false;
-      return true;
+    var allowed = {};
+    DOMAIN_ORDER.forEach(function (d) {
+      if ((d === 'sensor' || d === 'binary_sensor') && !includeSensors) return;
+      allowed[d] = true;
     });
+    var groups = {};
+    S.order.forEach(function (id) {
+      var d = id.split('.')[0];
+      if (!allowed[d]) return;
+      var e = S.entities[id];
+      if (!isUsable(e)) return;
+      var area = areaOfEntity(e);
+      if (!groups[area]) groups[area] = [];
+      groups[area].push(id);
+    });
+
+    var areaOrder = ['Sala', 'Cozinha', 'Suíte', 'Quarto', 'Banheiro', 'Varanda', 'Hall', 'Carro', 'Limpeza', 'Energia', 'Rede', 'Outros'];
+    var names = Object.keys(groups).sort(function (a, b) {
+      var ia = areaOrder.indexOf(a), ib = areaOrder.indexOf(b);
+      if (ia === -1) ia = 999; if (ib === -1) ib = 999;
+      if (ia !== ib) return ia - ib;
+      return a.localeCompare(b, 'pt-BR');
+    });
+
     var pages = [];
-    domains.forEach(function (d) {
-      var ids = S.order.filter(function (id) {
-        return id.indexOf(d + '.') === 0 && isUsable(S.entities[id]);
-      });
-      if (!ids.length) return;
-      var max = pageSize();
+    var max = pageSize();
+    names.forEach(function (name) {
+      var ids = groups[name];
+      if (!ids || !ids.length) return;
       var chunks = Math.ceil(ids.length / max);
       for (var i = 0; i < chunks; i++) {
-        var slice = ids.slice(i * max, (i + 1) * max);
-        var name = DOMAIN_NAME[d] || d;
-        if (chunks > 1) name += ' ' + (i + 1);
-        pages.push({ name: name, entities: slice });
+        pages.push({
+          name: name + (chunks > 1 ? ' ' + (i + 1) : ''),
+          entities: ids.slice(i * max, (i + 1) * max)
+        });
       }
     });
     return pages;
@@ -371,6 +413,112 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* painel do carro (BYD Song Plus)                                   */
+  /* ------------------------------------------------------------------ */
+  function findE(id) { return S.entities[id] || null; }
+  function findAny(ids) { for (var i = 0; i < ids.length; i++) { var e = findE(ids[i]); if (e) return e; } return null; }
+  function eNum(e) { if (!e) return null; var n = parseFloat(e.state); return isNaN(n) ? null : n; }
+  function fmtVal(e, suffix) {
+    if (!e) return '—';
+    if (e.state === 'unavailable' || e.state === 'unknown') return '—';
+    var u = (e.attributes && e.attributes.unit_of_measurement) || suffix || '';
+    return e.state + (u ? (' ' + u) : '');
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function renderCar() {
+    if (!el.carCards || !el.carDetails) return;
+    var lock = findE('lock.carro_song_plus_lock');
+    var doors = findAny(['binary_sensor.carro_song_plus_doors', 'binary_sensor.linus_dashboard_door_area_carroa']);
+    var windows = findAny(['binary_sensor.carro_song_plus_windows', 'binary_sensor.linus_dashboard_window_area_carroa']);
+    var trunk = findE('binary_sensor.song_plus_trunk');
+    var batt = findAny(['sensor.carro_song_plus_battery_level', 'sensor.byd_soc', 'sensor.linus_dashboard_battery_area_carroa']);
+    var charging = findE('binary_sensor.carro_song_plus_charging');
+    var fuel = findE('sensor.carro_song_plus_fuel_level');
+    var evRange = findAny(['sensor.byd_autonomia_ev', 'sensor.carro_song_plus_ev_endurance', 'sensor.song_plus_ev_endurance']);
+    var fuelRange = findAny(['sensor.byd_autonomia_combustivel', 'sensor.carro_song_plus_fuel_range']);
+    var totalRange = findAny(['sensor.byd_autonomia_total', 'sensor.carro_song_plus_range', 'sensor.song_plus_range_v2']);
+    var odo = findAny(['sensor.byd_odometro', 'sensor.carro_song_plus_odometer', 'sensor.song_plus_cumulative_total_mileage']);
+    var online = findE('binary_sensor.carro_song_plus_online');
+    var loc = findE('device_tracker.carro_song_plus_location');
+    var vehOn = findE('binary_sensor.song_plus_vehicle_on');
+
+    var parts = [];
+    if (online) parts.push(online.state === 'on' ? 'online' : 'offline');
+    if (loc && loc.state && loc.state !== 'unknown' && loc.state !== 'unavailable' && loc.state !== 'not_home') parts.push(loc.state);
+    if (loc && loc.state === 'not_home') parts.push('fora de casa');
+    if (vehOn) parts.push(vehOn.state === 'on' ? 'ligado' : 'desligado');
+    if (el.carSub) el.carSub.textContent = parts.length ? parts.join(' · ') : 'BYD Song Plus';
+
+    function card(label, value, sub, cls) {
+      return '<div class="car-card ' + (cls || '') + '"><div class="label">' + esc(label) +
+        '</div><div class="value">' + esc(value) + '</div><div class="sub">' + (sub || '&nbsp;') + '</div></div>';
+    }
+
+    var lockTxt = '—', lockSub = '&nbsp;', lockCls = '';
+    if (lock) {
+      if (lock.state === 'locked') { lockTxt = 'Travado'; lockCls = 'good'; }
+      else if (lock.state === 'unlocked') { lockTxt = 'Destravado'; lockCls = 'bad'; }
+      else { lockTxt = lock.state; }
+    }
+    var doorBits = [];
+    if (doors) doorBits.push(doors.state === 'on' ? 'portas abertas' : 'portas fechadas');
+    if (windows) doorBits.push(windows.state === 'on' ? 'janelas abertas' : 'janelas fechadas');
+    if (trunk) doorBits.push(trunk.state === 'on' ? 'porta-malas aberto' : 'porta-malas fechado');
+    if (doorBits.length) lockSub = esc(doorBits.join(' · '));
+    if (doors && doors.state === 'on') lockCls = 'bad';
+
+    var battVal = fmtVal(batt, '%'), battSub = '&nbsp;', battCls = 'accent';
+    var bn = eNum(batt);
+    if (bn != null) {
+      if (bn <= 20) battCls = 'bad'; else if (bn <= 40) battCls = 'warn'; else battCls = 'good';
+    }
+    if (charging) battSub = charging.state === 'on' ? 'carregando' : 'não carregando';
+
+    var fuelVal = fmtVal(fuel, '%'), fuelSub = '&nbsp;', fuelCls = 'warn';
+    var fn = eNum(fuel);
+    if (fn != null) {
+      if (fn <= 15) fuelCls = 'bad'; else if (fn <= 30) fuelCls = 'warn'; else fuelCls = 'good';
+    }
+
+    el.carCards.innerHTML = card('Travamento', lockTxt, lockSub, lockCls) +
+      card('Bateria', battVal, battSub, battCls) +
+      card('Combustível', fuelVal, fuelSub, fuelCls);
+
+    function row(k, v, cls) {
+      return '<div class="row"><span class="k">' + esc(k) + '</span><span class="v ' + (cls || '') + '">' + esc(v) + '</span></div>';
+    }
+    var html = '';
+    function addRow(label, e, opts) {
+      opts = opts || {};
+      if (!e) return;
+      var v = fmtVal(e, opts.suffix);
+      var cls = opts.cls || '';
+      if (opts.binary) {
+        if (e.state === 'on') { v = opts.on || 'Sim'; cls = opts.onCls || 'warn'; }
+        else if (e.state === 'off') { v = opts.off || 'Não'; cls = opts.offCls || 'off'; }
+        else if (e.state === 'unavailable' || e.state === 'unknown') { return; }
+      }
+      if ((v === '—' || v === '') && !opts.showEmpty) return;
+      html += row(label, v, cls);
+    }
+
+    addRow('Portas', doors, { binary: true, on: 'Abertas', off: 'Fechadas', onCls: 'bad', offCls: 'on' });
+    addRow('Janelas', windows, { binary: true, on: 'Abertas', off: 'Fechadas', onCls: 'bad', offCls: 'on' });
+    addRow('Porta-malas', trunk, { binary: true, on: 'Aberto', off: 'Fechado', onCls: 'bad', offCls: 'on' });
+    addRow('Autonomia EV', evRange);
+    addRow('Autonomia combustível', fuelRange);
+    addRow('Autonomia total', totalRange);
+    addRow('Odômetro', odo);
+    if (loc && loc.state && loc.state !== 'unknown' && loc.state !== 'unavailable') {
+      html += row('Localização', loc.state === 'not_home' ? 'Fora de casa' : loc.state, '');
+    }
+
+    if (!html) html = '<div class="car-empty">Nenhum dado do carro encontrado.</div>';
+    el.carDetails.innerHTML = html;
+  }
+
+  /* ------------------------------------------------------------------ */
   /* render                                                            */
   /* ------------------------------------------------------------------ */
   function stateText(e) {
@@ -415,9 +563,12 @@
   }
 
   function render() {
+    renderCar();
     if (!S.pages.length) {
       el.grid.innerHTML = '';
+      if (el.pageDots) el.pageDots.innerHTML = '';
       el.pageName.textContent = 'Nenhuma entidade';
+      el.footPage.textContent = '';
       return;
     }
     var page = S.pages[S.pageIndex];
@@ -679,11 +830,13 @@
   /* teclado                                                           */
   /* ------------------------------------------------------------------ */
   var KEY = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, BACK: 10009, BACK2: 461,
-    RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406, PLAY: 415, PAUSE: 19, PLAYPAUSE: 179 };
+    RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406, PLAY: 415, PAUSE: 19, PLAYPAUSE: 179,
+    CH_UP: 427, CH_DOWN: 428 };
 
   function onKey(ev) {
     var k = ev.keyCode;
-    if ([37, 38, 39, 40, 13, 10009, 461, 403, 404, 405, 406, 415, 19, 179].indexOf(k) === -1) return;
+    var isCh = (k === 427 || k === 428 || ev.key === 'ChannelUp' || ev.key === 'ChannelDown');
+    if ([37, 38, 39, 40, 13, 10009, 461, 403, 404, 405, 406, 415, 19, 179, 427, 428].indexOf(k) === -1 && !isCh) return;
     ev.preventDefault();
     resetIdle();
 
@@ -729,6 +882,8 @@
     if (k === KEY.GREEN) { openSettings(); return; }
     if (k === KEY.YELLOW) { refreshStates(); toast('Atualizando...'); return; }
     if (k === KEY.BLUE) { nextPage(); return; }
+    if (k === KEY.CH_UP || ev.key === 'ChannelUp') { nextPage(); return; }
+    if (k === KEY.CH_DOWN || ev.key === 'ChannelDown') { prevPage(); return; }
   }
 
   function moveGrid(delta) {
@@ -814,7 +969,7 @@
 
   try {
     if (window.tizen && tizen.tvinputdevice) {
-      ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue']
+      ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue', 'ChannelUp', 'ChannelDown']
         .forEach(function (k) { try { tizen.tvinputdevice.registerKey(k); } catch (e) {} });
     }
   } catch (e) {}
