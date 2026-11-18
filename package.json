@@ -1,0 +1,20 @@
+{
+  "name": "tvsam-home-assistant",
+  "version": "1.0.1",
+  "description": "Dashboard do Home Assistant para TVs Samsung (TizenBrew)",
+  "packageType": "app",
+  "appName": "Home Assistant",
+  "appPath": "app/index.html",
+  "author": "murilorisso",
+  "license": "MIT",
+  "keys": [
+    "MediaPlayPause",
+    "MediaPlay",
+    "MediaPause",
+    "MediaStop",
+    "ColorF0Red",
+    "ColorF1Green",
+    "ColorF2Yellow",
+    "ColorF3Blue"
+  ]
+}

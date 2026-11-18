@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home Assistant</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Tela de configuração inicial / erro de conexão -->
+  <section id="setup" class="screen hidden">
+    <div class="setup-box">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 12h3v9h6v-6h2v6h6v-9h3z"/></svg>
+      </div>
+      <h1>Home Assistant <span>na TV</span></h1>
+      <p class="muted">Informe o endereço do servidor local (proxy) que fala com o Home Assistant.</p>
+
+      <label for="inp-server">Servidor</label>
+      <input id="inp-server" type="text" spellcheck="false" autocomplete="off"
+             placeholder="http://10.0.0.16:8077">
+
+      <div class="row">
+        <button id="btn-save" class="btn primary">Conectar</button>
+        <button id="btn-retry" class="btn">Tentar de novo</button>
+      </div>
+
+      <p id="setup-status" class="status"></p>
+      <p class="hint">Dica: vermelho abre as páginas, verde abre os ajustes.</p>
+      <p class="hint">O token do Home Assistant é configurado no painel do servidor, não aqui.</p>
+    </div>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="screen hidden">
+    <header id="topbar">
+      <div class="left">
+        <div id="clock">--:--</div>
+        <div id="date"></div>
+      </div>
+      <div class="center">
+        <div id="page-name">Casa</div>
+        <div id="page-dots"></div>
+      </div>
+      <div class="right">
+        <div id="conn" class="conn"><span class="dot"></span><span id="conn-txt">conectando</span></div>
+        <div id="updated" class="muted small"></div>
+      </div>
+    </header>
+
+    <main id="grid-wrap">
+      <div id="grid"></div>
+    </main>
+
+    <footer id="footer">
+      <span><b>&#9650;&#9660;&#9664;&#9654;</b> navegar</span>
+      <span><b>OK</b> acionar</span>
+      <span><b>&#9664;</b> voltar</span>
+      <span class="red"><b>VERMELHO</b> páginas</span>
+      <span class="green"><b>VERDE</b> ajustes</span>
+      <span id="foot-page" class="right"></span>
+    </footer>
+  </section>
+
+  <!-- Detalhe de uma entidade -->
+  <section id="detail" class="screen hidden">
+    <div class="detail-box">
+      <div class="detail-head">
+        <div id="detail-icon" class="icon big"></div>
+        <div>
+          <h2 id="detail-name">--</h2>
+          <div id="detail-state" class="muted"></div>
+        </div>
+      </div>
+      <div id="detail-controls" class="controls"></div>
+      <div id="detail-attrs" class="attrs"></div>
+      <div class="detail-foot"><span><b>VOLTAR</b> fecha</span></div>
+    </div>
+  </section>
+
+  <!-- Lista de páginas -->
+  <section id="pages" class="screen hidden">
+    <div class="panel">
+      <h2>Páginas</h2>
+      <div id="pages-list" class="pages-list"></div>
+      <div class="detail-foot"><span><b>VERMELHO</b> / <b>VOLTAR</b> fecha</span></div>
+    </div>
+  </section>
+
+  <!-- Ajustes -->
+  <section id="settings" class="screen hidden">
+    <div class="panel">
+      <h2>Ajustes</h2>
+      <label for="set-server">Servidor</label>
+      <input id="set-server" type="text" spellcheck="false" autocomplete="off">
+      <label for="set-cols">Colunas</label>
+      <input id="set-cols" type="number" min="2" max="6" step="1">
+      <div class="row">
+        <button id="set-save" class="btn primary">Salvar e recarregar</button>
+        <button id="set-test" class="btn">Testar</button>
+      </div>
+      <p id="set-status" class="status"></p>
+      <div class="detail-foot"><span><b>VERDE</b> / <b>VOLTAR</b> fecha</span></div>
+    </div>
+  </section>
+
+  <!-- Relógio ocioso -->
+  <section id="idle" class="screen hidden">
+    <div class="idle-clock">
+      <div id="idle-time">--:--</div>
+      <div id="idle-date"></div>
+      <div id="idle-weather"></div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
