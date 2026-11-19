@@ -1,7 +1,7 @@
 {
   "name": "tvsam-home-assistant",
-  "version": "1.1.0",
-  "description": "Dashboard do Home Assistant para TVs Samsung (TizenBrew) - tela dividida com painel do BYD e listas por ambiente",
+  "version": "1.2.0",
+  "description": "Dashboard do Home Assistant para TVs Samsung (TizenBrew) - menu VOLTAR com visão do carro BYD, luzes/itens ligados, robô aspirador e ambientes",
   "packageType": "app",
   "appName": "Home Assistant",
   "appPath": "app/index.html",

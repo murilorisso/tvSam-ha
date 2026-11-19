@@ -48,6 +48,7 @@
   var el = {
     setup: $('setup'), dashboard: $('dashboard'), detail: $('detail'),
     pages: $('pages'), settings: $('settings'), idle: $('idle'),
+    menu: $('menu'), carview: $('carview'), lights: $('lights'), vacuum: $('vacuum'),
     clock: $('clock'), date: $('date'), pageName: $('page-name'),
     pageDots: $('page-dots'), conn: $('conn'), connTxt: $('conn-txt'),
     updated: $('updated'), grid: $('grid'), footPage: $('foot-page'),
@@ -58,6 +59,11 @@
     setServer: $('set-server'), setCols: $('set-cols'), setStatus: $('set-status'),
     idleTime: $('idle-time'), idleDate: $('idle-date'), idleWeather: $('idle-weather'),
     carTitle: $('car-title'), carSub: $('car-sub'), carCards: $('car-cards'), carDetails: $('car-details'),
+    menuList: $('menu-list'),
+    carviewSub: $('carview-sub'), carviewCards: $('carview-cards'), carviewDetails: $('carview-details'),
+    lightsGrid: $('lights-grid'), lightsCount: $('lights-count'), lightsEmpty: $('lights-empty'),
+    vacuumTitle: $('vacuum-title'), vacuumStatus: $('vacuum-status'), vacuumBattery: $('vacuum-battery'),
+    vacuumActions: $('vacuum-actions'), vacuumRoutines: $('vacuum-routines'), vacuumEmpty: $('vacuum-empty'),
     toast: $('toast')
   };
 
@@ -123,8 +129,8 @@
   }
 
   function closeAll() {
-    ['setup', 'dashboard', 'detail', 'pages', 'settings', 'idle'].forEach(function (k) {
-      el[k].classList.add('hidden');
+    ['setup', 'dashboard', 'detail', 'pages', 'settings', 'idle', 'menu', 'carview', 'lights', 'vacuum'].forEach(function (k) {
+      if (el[k]) el[k].classList.add('hidden');
     });
   }
 
@@ -159,7 +165,7 @@
       render();
     }
     S.idleTimer = setTimeout(function () {
-      if (S.screen === 'dashboard' || S.screen === 'detail' || S.screen === 'pages') {
+      if (S.screen === 'dashboard' || S.screen === 'detail' || S.screen === 'pages' || S.screen === 'menu' || S.screen === 'carview' || S.screen === 'lights' || S.screen === 'vacuum') {
         S.idleOn = true;
         show('idle');
         updateIdleWeather();
@@ -314,6 +320,12 @@
       S.conn = true;
       S.lastUpdate = Date.now();
       if (S.screen === 'dashboard') render();
+      if (S.screen === 'menu') renderMenu();
+      if (S.screen === 'carview') renderCar();
+      if (S.screen === 'lights') renderLights();
+      if (S.screen === 'vacuum') renderVacuum();
+      if (S.screen === 'pages') renderPagesList();
+      if (S.screen === 'detail') renderDetail();
       if (S.screen === 'setup') {
         show('dashboard');
         render();
@@ -401,12 +413,17 @@
     if (map[d]) return callService(d, map[d], { entity_id: e.entity_id });
     if (d === 'scene') return callService('scene', 'turn_on', { entity_id: e.entity_id });
     if (d === 'script') return callService('script', 'turn_on', { entity_id: e.entity_id });
+    if (d === 'button' || d === 'input_button') return callService(d === 'button' ? 'button' : 'input_button', 'press', { entity_id: e.entity_id });
     if (d === 'media_player') return callService('media_player', 'media_play_pause', { entity_id: e.entity_id });
     if (d === 'cover') {
       return callService('cover', (st === 'closed' ? 'open_cover' : 'close_cover'), { entity_id: e.entity_id });
     }
     if (d === 'lock') {
       return callService('lock', (st === 'locked' ? 'unlock' : 'lock'), { entity_id: e.entity_id });
+    }
+    if (d === 'vacuum') {
+      if (st === 'cleaning' || st === 'returning') return callService('vacuum', 'pause', { entity_id: e.entity_id });
+      return callService('vacuum', 'start', { entity_id: e.entity_id });
     }
     openDetail(e.entity_id);
     return Promise.resolve();
@@ -427,7 +444,6 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
   function renderCar() {
-    if (!el.carCards || !el.carDetails) return;
     var lock = findE('lock.carro_song_plus_lock');
     var doors = findAny(['binary_sensor.carro_song_plus_doors', 'binary_sensor.linus_dashboard_door_area_carroa']);
     var windows = findAny(['binary_sensor.carro_song_plus_windows', 'binary_sensor.linus_dashboard_window_area_carroa']);
@@ -448,7 +464,9 @@
     if (loc && loc.state && loc.state !== 'unknown' && loc.state !== 'unavailable' && loc.state !== 'not_home') parts.push(loc.state);
     if (loc && loc.state === 'not_home') parts.push('fora de casa');
     if (vehOn) parts.push(vehOn.state === 'on' ? 'ligado' : 'desligado');
-    if (el.carSub) el.carSub.textContent = parts.length ? parts.join(' · ') : 'BYD Song Plus';
+    var subText = parts.length ? parts.join(' · ') : 'BYD Song Plus';
+    if (el.carSub) el.carSub.textContent = subText;
+    if (el.carviewSub) el.carviewSub.textContent = subText;
 
     function card(label, value, sub, cls) {
       return '<div class="car-card ' + (cls || '') + '"><div class="label">' + esc(label) +
@@ -481,7 +499,7 @@
       if (fn <= 15) fuelCls = 'bad'; else if (fn <= 30) fuelCls = 'warn'; else fuelCls = 'good';
     }
 
-    el.carCards.innerHTML = card('Travamento', lockTxt, lockSub, lockCls) +
+    var cardsHtml = card('Travamento', lockTxt, lockSub, lockCls) +
       card('Bateria', battVal, battSub, battCls) +
       card('Combustível', fuelVal, fuelSub, fuelCls);
 
@@ -515,7 +533,11 @@
     }
 
     if (!html) html = '<div class="car-empty">Nenhum dado do carro encontrado.</div>';
-    el.carDetails.innerHTML = html;
+
+    if (el.carCards) el.carCards.innerHTML = cardsHtml;
+    if (el.carDetails) el.carDetails.innerHTML = html;
+    if (el.carviewCards) el.carviewCards.innerHTML = cardsHtml;
+    if (el.carviewDetails) el.carviewDetails.innerHTML = html;
   }
 
   /* ------------------------------------------------------------------ */
@@ -684,6 +706,375 @@
   /* ------------------------------------------------------------------ */
   /* detalhe                                                           */
   /* ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* menu principal                                                    */
+  /* ------------------------------------------------------------------ */
+  var MENU_ICON_CAR = 'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z';
+  var MENU_ICON_BULB = 'M9 21h6v-1H9v1zm3-19a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2zm2.9 11.3-.9.6V15h-4v-1.1l-.9-.6a5 5 0 1 1 5.8 0z';
+  var MENU_ICON_VAC = 'M12 2a5 5 0 0 0-5 5v1H5a2 2 0 0 0-2 2v7a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-7a2 2 0 0 0-2-2h-2V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v1H9V7zm-3 5h12v5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-5zm3 1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm6 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z';
+  var MENU_ICON_HOME = 'M12 3 2 12h3v9h6v-6h2v6h6v-9h3z';
+
+  function menuSvg(path) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + path + '"/></svg>';
+  }
+
+  function getCarSummary() {
+    var online = findE('binary_sensor.carro_song_plus_online');
+    var loc = findE('device_tracker.carro_song_plus_location');
+    var vehOn = findE('binary_sensor.song_plus_vehicle_on');
+    var parts = [];
+    if (online) parts.push(online.state === 'on' ? 'online' : 'offline');
+    if (loc && loc.state && loc.state !== 'unknown' && loc.state !== 'unavailable' && loc.state !== 'not_home') parts.push(loc.state);
+    if (loc && loc.state === 'not_home') parts.push('fora de casa');
+    if (vehOn) parts.push(vehOn.state === 'on' ? 'ligado' : 'desligado');
+    return parts.length ? parts.join(' · ') : 'BYD Song Plus';
+  }
+
+  function isItemOn(e) {
+    if (!e) return false;
+    var d = e.entity_id.split('.')[0];
+    var st = e.state;
+    if (st === 'unavailable' || st === 'unknown') return false;
+    if (d === 'light' || d === 'switch' || d === 'input_boolean' || d === 'fan') return st === 'on';
+    if (d === 'climate') return st !== 'off';
+    if (d === 'media_player') return st === 'playing';
+    if (d === 'cover') return st === 'open';
+    if (d === 'lock') return st === 'unlocked';
+    if (d === 'humidifier') return st === 'on';
+    return false;
+  }
+
+  function getLightsOn() {
+    var ids = [];
+    S.order.forEach(function (id) {
+      var e = S.entities[id];
+      if (!e || !isUsable(e)) return;
+      if (isItemOn(e)) ids.push(id);
+    });
+    ids.sort(function (a, b) {
+      var ea = S.entities[a], eb = S.entities[b];
+      var aa = areaOfEntity(ea), ab = areaOfEntity(eb);
+      var ia = ['Sala', 'Cozinha', 'Suíte', 'Quarto', 'Banheiro', 'Varanda', 'Hall', 'Carro', 'Limpeza', 'Energia', 'Rede', 'Outros'].indexOf(aa);
+      var ib = ['Sala', 'Cozinha', 'Suíte', 'Quarto', 'Banheiro', 'Varanda', 'Hall', 'Carro', 'Limpeza', 'Energia', 'Rede', 'Outros'].indexOf(ab);
+      if (ia === -1) ia = 999; if (ib === -1) ib = 999;
+      if (ia !== ib) return ia - ib;
+      var na = ((ea.attributes && ea.attributes.friendly_name) || a);
+      var nb = ((eb.attributes && eb.attributes.friendly_name) || b);
+      return na.localeCompare(nb, 'pt-BR');
+    });
+    return ids;
+  }
+
+  function getVacuumEntity() {
+    var v = findE('vacuum.alfred');
+    if (v && v.state !== 'unavailable') return v;
+    v = findE('vacuum.terezinha');
+    if (v && v.state !== 'unavailable') return v;
+    var all = S.order.filter(function (id) { return id.indexOf('vacuum.') === 0; });
+    for (var i = 0; i < all.length; i++) {
+      var e = S.entities[all[i]];
+      if (e && e.state !== 'unavailable') return e;
+    }
+    return findE('vacuum.alfred') || (all.length ? S.entities[all[0]] : null);
+  }
+
+  function vacNameKey(vac) {
+    if (!vac) return 'alfred';
+    var id = vac.entity_id.split('.')[1] || '';
+    return id.toLowerCase();
+  }
+
+  function getVacuumRoutines(vac) {
+    var key = vacNameKey(vac);
+    var out = [];
+    S.order.forEach(function (id) {
+      if (id.indexOf('button.') !== 0) return;
+      var e = S.entities[id];
+      if (!e || !isUsable(e)) return;
+      var fn = ((e.attributes && e.attributes.friendly_name) || '') + ' ' + id;
+      var low = fn.toLowerCase();
+      if (low.indexOf(key) === -1) return;
+      if (/dock_resolve|dock_error|resolve_dock|reiniciar|restart|reboot|reset/.test(low)) return;
+      out.push(id);
+    });
+    out.sort(function (a, b) {
+      var na = ((S.entities[a].attributes && S.entities[a].attributes.friendly_name) || a);
+      var nb = ((S.entities[b].attributes && S.entities[b].attributes.friendly_name) || b);
+      return na.localeCompare(nb, 'pt-BR');
+    });
+    return out;
+  }
+
+  function routineLabel(e) {
+    var name = (e.attributes && e.attributes.friendly_name) || e.entity_id;
+    name = name.replace(/^(Alfred|terezinha|Terezinha)\s*/i, '').trim();
+    return name || (e.attributes && e.attributes.friendly_name) || e.entity_id;
+  }
+
+  function vacStateLabel(st) {
+    var m = { docked: 'na base', cleaning: 'limpando', returning: 'retornando', paused: 'pausado', idle: 'ocioso', error: 'erro', charging: 'carregando' };
+    return m[st] || st || '—';
+  }
+
+  function getVacuumSummary() {
+    var v = getVacuumEntity();
+    if (!v) return 'indisponível';
+    var parts = [vacStateLabel(v.state)];
+    var key = vacNameKey(v);
+    var batt = findE('sensor.' + key + '_bateria');
+    if (batt && batt.state !== 'unavailable' && batt.state !== 'unknown') parts.push(batt.state + '%');
+    return parts.join(' · ');
+  }
+
+  function buildMenuItems() {
+    var lights = getLightsOn();
+    return [
+      { key: 'car', icon: MENU_ICON_CAR, title: 'Visão geral do carro', sub: getCarSummary() },
+      { key: 'lights', icon: MENU_ICON_BULB, title: 'Luzes e itens ligados', sub: lights.length ? (lights.length + ' ligado' + (lights.length > 1 ? 's' : '')) : 'Nada ligado agora' },
+      { key: 'vacuum', icon: MENU_ICON_VAC, title: 'Robô aspirador', sub: getVacuumSummary() },
+      { key: 'pages', icon: MENU_ICON_HOME, title: 'Páginas / ambientes', sub: (S.pages.length || 0) + ' ambiente' + (S.pages.length === 1 ? '' : 's') }
+    ];
+  }
+
+  function renderMenu() {
+    var items = buildMenuItems();
+    if (S.menuFocus < 0) S.menuFocus = 0;
+    if (S.menuFocus > items.length - 1) S.menuFocus = items.length - 1;
+    if (!el.menuList) return;
+    el.menuList.innerHTML = '';
+    items.forEach(function (it, i) {
+      var row = document.createElement('div');
+      row.className = 'menu-item' + (i === S.menuFocus ? ' focused' : '');
+      row.innerHTML = '<div class="left"><div class="micon">' + menuSvg(it.icon) + '</div><div><div class="title">' + esc(it.title) + '</div><div class="sub">' + esc(it.sub) + '</div></div></div><div class="chev">›</div>';
+      row.addEventListener('click', function () { S.menuFocus = i; pickMenu(); });
+      el.menuList.appendChild(row);
+    });
+  }
+
+  function openMenu() {
+    resetIdle();
+    S.menuFocus = 0;
+    renderMenu();
+    show('menu');
+  }
+
+  function moveMenu(delta) {
+    var items = buildMenuItems();
+    var next = S.menuFocus + delta;
+    if (next < 0) next = 0;
+    if (next > items.length - 1) next = items.length - 1;
+    S.menuFocus = next;
+    renderMenu();
+  }
+
+  function pickMenu() {
+    var items = buildMenuItems();
+    var it = items[S.menuFocus];
+    if (!it) return;
+    if (it.key === 'car') openCarView();
+    else if (it.key === 'lights') openLights();
+    else if (it.key === 'vacuum') openVacuum();
+    else if (it.key === 'pages') openPages();
+  }
+
+  function openCarView() {
+    resetIdle();
+    renderCar();
+    show('carview');
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* luzes e itens ligados                                             */
+  /* ------------------------------------------------------------------ */
+  function renderLights() {
+    S.lightsItems = getLightsOn();
+    if (!el.lightsGrid) return;
+    if (S.lightsFocus < 0) S.lightsFocus = 0;
+    if (S.lightsItems.length && S.lightsFocus > S.lightsItems.length - 1) S.lightsFocus = S.lightsItems.length - 1;
+    if (!S.lightsItems.length) S.lightsFocus = 0;
+    if (el.lightsCount) el.lightsCount.textContent = S.lightsItems.length ? (S.lightsItems.length + ' ligado' + (S.lightsItems.length > 1 ? 's' : '')) : '';
+    if (el.lightsEmpty) el.lightsEmpty.classList.toggle('hidden', S.lightsItems.length > 0);
+    el.lightsGrid.style.display = S.lightsItems.length ? '' : 'none';
+    el.lightsGrid.innerHTML = '';
+    S.lightsItems.forEach(function (id, i) {
+      var e = S.entities[id];
+      if (!e) return;
+      var d = id.split('.')[0];
+      var tile = document.createElement('div');
+      tile.className = 'tile ' + d + ' on' + (i === S.lightsFocus ? ' focused' : '');
+      var ic = document.createElement('div'); ic.className = 'icon'; ic.innerHTML = svg(d);
+      tile.appendChild(ic);
+      var box = document.createElement('div');
+      var nm = document.createElement('div'); nm.className = 'name';
+      nm.textContent = (e.attributes && e.attributes.friendly_name) || id;
+      var st = document.createElement('div'); st.className = 'state';
+      var area = areaOfEntity(e);
+      st.textContent = area + ' · ' + stateText(e);
+      box.appendChild(nm); box.appendChild(st);
+      tile.appendChild(box);
+      tile.addEventListener('click', function () { S.lightsFocus = i; activateLightItem(); });
+      el.lightsGrid.appendChild(tile);
+    });
+  }
+
+  function openLights() {
+    resetIdle();
+    S.lightsFocus = 0;
+    renderLights();
+    show('lights');
+  }
+
+  function moveLightsFocus(delta) {
+    if (!S.lightsItems.length) return;
+    var next = S.lightsFocus + delta;
+    if (next < 0) next = 0;
+    if (next > S.lightsItems.length - 1) next = S.lightsItems.length - 1;
+    S.lightsFocus = next;
+    var tiles = el.lightsGrid.children;
+    for (var k = 0; k < tiles.length; k++) tiles[k].classList.toggle('focused', k === S.lightsFocus);
+  }
+
+  function activateLightItem() {
+    if (!S.lightsItems.length) return;
+    var id = S.lightsItems[S.lightsFocus];
+    var e = S.entities[id];
+    if (!e) return;
+    toggleEntity(e).then(function () {
+      // refresh will recompute list
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* robô aspirador                                                    */
+  /* ------------------------------------------------------------------ */
+  function buildVacuumItems(vac) {
+    var items = [];
+    if (vac) {
+      items.push({ type: 'action', label: 'Iniciar / Pausar', sub: 'limpeza', action: 'toggle' });
+      items.push({ type: 'action', label: 'Recolher à base', sub: 'dock', action: 'dock' });
+    }
+    var routines = getVacuumRoutines(vac);
+    routines.forEach(function (id) { items.push({ type: 'routine', id: id }); });
+    return items;
+  }
+
+  function renderVacuum() {
+    var vac = getVacuumEntity();
+    S.vacuumItems = buildVacuumItems(vac);
+    if (S.vacuumFocus < 0) S.vacuumFocus = 0;
+    if (S.vacuumItems.length && S.vacuumFocus > S.vacuumItems.length - 1) S.vacuumFocus = S.vacuumItems.length - 1;
+    if (!S.vacuumItems.length) S.vacuumFocus = 0;
+
+    if (el.vacuumTitle) el.vacuumTitle.textContent = vac ? ((vac.attributes && vac.attributes.friendly_name) || 'Robô aspirador') : 'Robô aspirador';
+
+    var statusParts = [];
+    if (vac) {
+      statusParts.push(vacStateLabel(vac.state));
+      var key = vacNameKey(vac);
+      var room = findE('sensor.' + key + '_comodo_atual');
+      if (room && room.state && room.state !== 'unavailable' && room.state !== 'unknown') statusParts.push('cômodo: ' + room.state);
+      var prog = findE('sensor.' + key + '_cleaning_progress');
+      if (prog && prog.state && prog.state !== 'unavailable' && prog.state !== 'unknown' && prog.state !== '0') statusParts.push('progresso: ' + prog.state + '%');
+      var err = findE('sensor.' + key + '_vacuum_error');
+      if (err && err.state && err.state !== 'none' && err.state !== 'unavailable' && err.state !== 'unknown') statusParts.push('erro: ' + err.state);
+    } else {
+      statusParts.push('Nenhum aspirador encontrado');
+    }
+    if (el.vacuumStatus) el.vacuumStatus.textContent = statusParts.join(' · ');
+
+    if (el.vacuumBattery) {
+      var battTxt = '';
+      if (vac) {
+        var b = findE('sensor.' + vacNameKey(vac) + '_bateria');
+        if (b && b.state !== 'unavailable' && b.state !== 'unknown') battTxt = b.state + '%';
+      }
+      el.vacuumBattery.textContent = battTxt;
+    }
+
+    var actionCount = 0;
+    S.vacuumItems.forEach(function (it) { if (it.type === 'action') actionCount++; });
+
+    if (el.vacuumActions) {
+      el.vacuumActions.innerHTML = '';
+      for (var i = 0; i < actionCount; i++) {
+        (function (idx) {
+          var it = S.vacuumItems[idx];
+          var d = document.createElement('div');
+          d.className = 'vac-item action' + (idx === S.vacuumFocus ? ' focused' : '');
+          d.innerHTML = '<div class="big">' + esc(it.label) + '</div><div class="lbl">' + esc(it.sub || '') + '</div>';
+          d.addEventListener('click', function () { S.vacuumFocus = idx; activateVacuumItem(); });
+          el.vacuumActions.appendChild(d);
+        })(i);
+      }
+    }
+
+    if (el.vacuumRoutines) {
+      el.vacuumRoutines.innerHTML = '';
+      var routineCount = S.vacuumItems.length - actionCount;
+      if (el.vacuumEmpty) el.vacuumEmpty.classList.toggle('hidden', routineCount > 0);
+      el.vacuumRoutines.style.display = routineCount ? '' : 'none';
+      for (var j = actionCount; j < S.vacuumItems.length; j++) {
+        (function (idx) {
+          var it = S.vacuumItems[idx];
+          var e = S.entities[it.id];
+          if (!e) return;
+          var d = document.createElement('div');
+          d.className = 'vac-item routine' + (idx === S.vacuumFocus ? ' focused' : '');
+          var label = routineLabel(e);
+          d.innerHTML = '<div class="big">' + esc(label) + '</div><div class="lbl">rotina</div>';
+          d.addEventListener('click', function () { S.vacuumFocus = idx; activateVacuumItem(); });
+          el.vacuumRoutines.appendChild(d);
+        })(j);
+      }
+    }
+  }
+
+  function openVacuum() {
+    resetIdle();
+    S.vacuumFocus = 0;
+    renderVacuum();
+    show('vacuum');
+  }
+
+  function moveVacuumFocus(delta) {
+    if (!S.vacuumItems.length) return;
+    var next = S.vacuumFocus + delta;
+    if (next < 0) next = 0;
+    if (next > S.vacuumItems.length - 1) next = S.vacuumItems.length - 1;
+    S.vacuumFocus = next;
+    renderVacuum();
+  }
+
+  function activateVacuumItem() {
+    if (!S.vacuumItems.length) return;
+    var it = S.vacuumItems[S.vacuumFocus];
+    if (!it) return;
+    if (it.type === 'action') {
+      var vac = getVacuumEntity();
+      if (!vac) { toast('Aspirador indisponível'); return; }
+      if (it.action === 'toggle') {
+        var st = vac.state;
+        if (st === 'cleaning' || st === 'returning') {
+          callService('vacuum', 'pause', { entity_id: vac.entity_id }).then(function () { toast('Pausado'); });
+        } else {
+          callService('vacuum', 'start', { entity_id: vac.entity_id }).then(function () { toast('Iniciando limpeza'); });
+        }
+      } else if (it.action === 'dock') {
+        callService('vacuum', 'return_to_base', { entity_id: vac.entity_id }).then(function () { toast('Retornando à base'); });
+      }
+      setTimeout(function () { if (S.screen === 'vacuum') { refreshStates(true); } }, 1200);
+      return;
+    }
+    if (it.type === 'routine') {
+      var e = S.entities[it.id];
+      if (!e) return;
+      callService('button', 'press', { entity_id: it.id }).then(function () {
+        toast('Rotina iniciada: ' + routineLabel(e));
+      });
+      setTimeout(function () { if (S.screen === 'vacuum') { refreshStates(true); } }, 2000);
+    }
+  }
+
   function openDetail(id) {
     resetIdle();
     S.detailId = id;
@@ -833,6 +1224,45 @@
     RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406, PLAY: 415, PAUSE: 19, PLAYPAUSE: 179,
     CH_UP: 427, CH_DOWN: 428 };
 
+  function moveLightsGrid(delta) {
+    if (!S.lightsItems.length) return;
+    var cols = 4;
+    var next = S.lightsFocus + delta;
+    if (next < 0) next = 0;
+    if (next > S.lightsItems.length - 1) next = S.lightsItems.length - 1;
+    S.lightsFocus = next;
+    renderLights();
+  }
+
+  function moveVacuumGrid(dir) {
+    if (!S.vacuumItems.length) return;
+    var actionCount = 0;
+    S.vacuumItems.forEach(function (it) { if (it.type === 'action') actionCount++; });
+    var i = S.vacuumFocus;
+    var next = i;
+    if (i < actionCount) {
+      if (dir === 'left') next = Math.max(0, i - 1);
+      else if (dir === 'right') next = Math.min(actionCount - 1, i + 1);
+      else if (dir === 'up') next = i;
+      else if (dir === 'down') next = Math.min(S.vacuumItems.length - 1, actionCount + i);
+    } else {
+      var base = actionCount;
+      var rIdx = i - base;
+      var cols = 4;
+      if (dir === 'left') next = i - 1;
+      else if (dir === 'right') next = i + 1;
+      else if (dir === 'up') {
+        if (rIdx < cols) next = Math.min(actionCount - 1, rIdx < 2 ? rIdx : 1);
+        else next = i - cols;
+      } else if (dir === 'down') next = i + cols;
+      if (next < base) next = base;
+    }
+    if (next < 0) next = 0;
+    if (next > S.vacuumItems.length - 1) next = S.vacuumItems.length - 1;
+    S.vacuumFocus = next;
+    renderVacuum();
+  }
+
   function onKey(ev) {
     var k = ev.keyCode;
     var isCh = (k === 427 || k === 428 || ev.key === 'ChannelUp' || ev.key === 'ChannelDown');
@@ -852,8 +1282,41 @@
       return;
     }
 
+    if (S.screen === 'menu') {
+      if (k === KEY.BACK || k === KEY.BACK2) { show('dashboard'); render(); return; }
+      if (k === KEY.UP || k === KEY.LEFT) { moveMenu(-1); return; }
+      if (k === KEY.DOWN || k === KEY.RIGHT) { moveMenu(1); return; }
+      if (k === KEY.ENTER) { pickMenu(); return; }
+      return;
+    }
+
+    if (S.screen === 'carview') {
+      if (k === KEY.BACK || k === KEY.BACK2) { openMenu(); return; }
+      return;
+    }
+
+    if (S.screen === 'lights') {
+      if (k === KEY.BACK || k === KEY.BACK2) { openMenu(); return; }
+      if (k === KEY.LEFT) { moveLightsGrid(-1); return; }
+      if (k === KEY.RIGHT) { moveLightsGrid(1); return; }
+      if (k === KEY.UP) { moveLightsGrid(-4); return; }
+      if (k === KEY.DOWN) { moveLightsGrid(4); return; }
+      if (k === KEY.ENTER || k === KEY.PLAYPAUSE) { activateLightItem(); return; }
+      return;
+    }
+
+    if (S.screen === 'vacuum') {
+      if (k === KEY.BACK || k === KEY.BACK2) { openMenu(); return; }
+      if (k === KEY.LEFT) { moveVacuumGrid('left'); return; }
+      if (k === KEY.RIGHT) { moveVacuumGrid('right'); return; }
+      if (k === KEY.UP) { moveVacuumGrid('up'); return; }
+      if (k === KEY.DOWN) { moveVacuumGrid('down'); return; }
+      if (k === KEY.ENTER || k === KEY.PLAYPAUSE) { activateVacuumItem(); return; }
+      return;
+    }
+
     if (S.screen === 'pages') {
-      if (k === KEY.BACK || k === KEY.BACK2 || k === KEY.RED) { show('dashboard'); render(); return; }
+      if (k === KEY.BACK || k === KEY.BACK2 || k === KEY.RED) { openMenu(); return; }
       if (k === KEY.LEFT || k === KEY.UP) moveFocusPageList(-1);
       if (k === KEY.RIGHT || k === KEY.DOWN) moveFocusPageList(1);
       if (k === KEY.ENTER) pickPage();
@@ -877,7 +1340,7 @@
     if (k === KEY.UP) { moveGrid(-S.cols); return; }
     if (k === KEY.DOWN) { moveGrid(S.cols); return; }
     if (k === KEY.ENTER || k === KEY.PLAYPAUSE) { activate(); return; }
-    if (k === KEY.BACK || k === KEY.BACK2) { openPages(); return; }
+    if (k === KEY.BACK || k === KEY.BACK2) { openMenu(); return; }
     if (k === KEY.RED) { openPages(); return; }
     if (k === KEY.GREEN) { openSettings(); return; }
     if (k === KEY.YELLOW) { refreshStates(); toast('Atualizando...'); return; }
@@ -953,7 +1416,7 @@
       render();
       resetIdle();
       S.timer = setInterval(function () {
-        if (S.screen === 'dashboard' || S.screen === 'pages') refreshStates(true);
+        if (S.screen === 'dashboard' || S.screen === 'pages' || S.screen === 'menu' || S.screen === 'carview' || S.screen === 'lights' || S.screen === 'vacuum') refreshStates(true);
       }, (S.config && S.config.pollMs) || 4000);
     });
   }

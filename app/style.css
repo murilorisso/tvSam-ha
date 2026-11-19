@@ -249,3 +249,92 @@ input:focus{border-color:var(--accent);box-shadow:0 0 0 .15vw rgba(24,188,242,.2
 .car-details .v.bad{color:var(--red)}
 .car-details .v.warn{color:var(--warm)}
 .car-empty{color:var(--muted);font-size:1.1vw;padding:1vw 0}
+
+/* ---------------- menu principal ---------------- */
+.menu-panel{
+  margin:auto;width:52vw;padding:2.6vw 3vw;
+  background:linear-gradient(170deg,#121a24,#0d141c);
+  border:.1vw solid var(--border);border-radius:2vw;
+  box-shadow:0 2vw 5vw rgba(0,0,0,.55);
+}
+.menu-panel h2{margin:0 0 1.2vw;font-size:2.1vw}
+.menu-list{display:flex;flex-direction:column;gap:0.9vw;margin:0.6vw 0 0.4vw}
+.menu-item{
+  background:linear-gradient(160deg,var(--tile2),var(--tile));
+  border:.14vw solid #243243;border-radius:1.1vw;
+  padding:1.1vw 1.4vw;display:flex;align-items:center;justify-content:space-between;
+}
+.menu-item.focused{border-color:var(--accent);background:#1b2a39;box-shadow:0 0 0 .12vw rgba(24,188,242,.3)}
+.menu-item .left{display:flex;align-items:center}
+.menu-item .micon{width:2.4vw;height:2.4vw;margin-right:1vw;color:var(--accent);flex:0 0 auto}
+.menu-item .micon svg{width:100%;height:100%;fill:currentColor}
+.menu-item .title{font-size:1.5vw;font-weight:600;color:#fff}
+.menu-item .sub{font-size:1.0vw;color:var(--muted);margin-top:0.15vw}
+.menu-item .chev{font-size:1.6vw;color:#6f8298}
+
+/* ---------------- car view (tela cheia) ---------------- */
+.carview-wrap{
+  flex:1;display:flex;flex-direction:column;
+  margin:2.2vw 3.4vw 2.4vw 3.4vw;padding:2vw 2.4vw;
+  background:linear-gradient(170deg,#121a24,#0d141c);
+  border:.1vw solid var(--border);border-radius:2vw;
+  box-shadow:0 2vw 5vw rgba(0,0,0,.45);
+  min-height:0;overflow:hidden;
+}
+.carview-cards .car-card .value{font-size:2.4vw}
+.carview-cards .car-card .label{font-size:1vw}
+.carview-cards .car-card .sub{font-size:0.95vw}
+.carview-details{margin-top:0.6vw;display:grid;grid-template-columns:1fr 1fr;column-gap:2vw;align-content:start}
+.carview-details .row{padding:0.55vw 0}
+.carview-details .k,.carview-details .v{font-size:1.15vw}
+
+/* ---------------- lights / items on ---------------- */
+.lights-wrap{
+  flex:1;display:flex;flex-direction:column;
+  margin:2.2vw 3.4vw 2.4vw 3.4vw;padding:2vw 2.4vw;
+  background:linear-gradient(170deg,#121a24,#0d141c);
+  border:.1vw solid var(--border);border-radius:2vw;
+  min-height:0;overflow:hidden;
+}
+.lights-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1vw}
+.lights-head h2{margin:0;font-size:2.0vw}
+.lights-head .muted{font-size:1.1vw}
+.lights-grid{
+  flex:1;min-height:0;overflow:hidden;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  grid-auto-rows:11vh;gap:0.45vw;align-content:start;
+}
+.lights-empty{flex:1;display:flex;align-items:center;justify-content:center;font-size:1.6vw;color:var(--muted)}
+
+/* ---------------- vacuum ---------------- */
+.vacuum-wrap{
+  flex:1;display:flex;flex-direction:column;
+  margin:2.2vw 3.4vw 2.4vw 3.4vw;padding:1.8vw 2.4vw;
+  background:linear-gradient(170deg,#121a24,#0d141c);
+  border:.1vw solid var(--border);border-radius:2vw;
+  min-height:0;overflow:hidden;
+}
+.vacuum-head{display:flex;align-items:center;margin-bottom:1vw}
+.vacuum-icon{width:3.4vw;height:3.4vw;color:var(--accent);margin-right:1vw;flex:0 0 auto}
+.vacuum-icon svg{width:100%;height:100%;fill:currentColor}
+.vacuum-info{flex:1}
+.vacuum-info h2{margin:0;font-size:2vw}
+.vacuum-info .muted{font-size:1.05vw;margin-top:0.2vw}
+.vacuum-battery{font-size:1.8vw;font-weight:700;color:var(--green);min-width:6vw;text-align:right}
+.vacuum-section-title{font-size:1.0vw;color:var(--muted);margin:0.6vw 0 0.4vw;text-transform:uppercase;letter-spacing:.05em}
+.vacuum-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:0.6vw;margin-bottom:0.4vw}
+.vacuum-routines{
+  flex:1;min-height:0;overflow:hidden;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  grid-auto-rows:10.5vh;gap:0.45vw;align-content:start;
+}
+.vac-item{
+  background:linear-gradient(160deg,var(--tile2),var(--tile));
+  border:.14vw solid #243243;border-radius:11px;
+  padding:0.55vw 0.7vw;display:flex;flex-direction:column;justify-content:center;
+  text-align:center;min-height:0;overflow:hidden;
+}
+.vac-item.focused{border-color:var(--accent);background:#1b2a39;box-shadow:0 0 0 .12vw rgba(24,188,242,.3)}
+.vac-item .big{font-size:1.2vw;font-weight:600;color:#fff;line-height:1.15}
+.vac-item .lbl{font-size:0.85vw;color:var(--muted);margin-top:0.2vw}
+.vac-item.action .big{font-size:1.25vw}

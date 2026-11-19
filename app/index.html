@@ -72,12 +72,71 @@
     <footer id="footer">
       <span><b>&#9650;&#9660;&#9664;&#9654;</b> navegar</span>
       <span><b>OK</b> acionar</span>
+      <span><b>VOLTAR</b> menu</span>
       <span><b>CH ▲/▼</b> páginas</span>
       <span class="red"><b>VERMELHO</b> lista</span>
       <span class="green"><b>VERDE</b> ajustes</span>
       <span class="yellow"><b>AMARELO</b> atualizar</span>
       <span id="foot-page" class="right"></span>
     </footer>
+  </section>
+
+  <!-- Menu principal -->
+  <section id="menu" class="screen hidden">
+    <div class="menu-panel">
+      <h2>Menu</h2>
+      <div id="menu-list" class="menu-list"></div>
+      <div class="detail-foot"><span><b>VOLTAR</b> fecha</span> &nbsp; <span><b>OK</b> abrir</span></div>
+    </div>
+  </section>
+
+  <!-- Visão geral do carro -->
+  <section id="carview" class="screen hidden">
+    <div class="carview-wrap">
+      <div class="car-header">
+        <div class="car-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div>
+        <div>
+          <h2>BYD Song Plus</h2>
+          <div id="carview-sub" class="muted">Carregando dados...</div>
+        </div>
+      </div>
+      <div id="carview-cards" class="car-cards carview-cards"></div>
+      <div id="carview-details" class="car-details carview-details"></div>
+      <div class="detail-foot"><span><b>VOLTAR</b> volta ao menu</span></div>
+    </div>
+  </section>
+
+  <!-- Luzes e itens ligados -->
+  <section id="lights" class="screen hidden">
+    <div class="lights-wrap">
+      <div class="lights-head">
+        <h2>Luzes e itens ligados</h2>
+        <div id="lights-count" class="muted"></div>
+      </div>
+      <div id="lights-grid" class="lights-grid"></div>
+      <div id="lights-empty" class="lights-empty hidden">Nada ligado agora.</div>
+      <div class="detail-foot"><span><b>&#9650;&#9660;&#9664;&#9654;</b> navegar</span> &nbsp; <span><b>OK</b> desligar/acionar</span> &nbsp; <span><b>VOLTAR</b> volta ao menu</span></div>
+    </div>
+  </section>
+
+  <!-- Robô aspirador -->
+  <section id="vacuum" class="screen hidden">
+    <div class="vacuum-wrap">
+      <div class="vacuum-head">
+        <div class="vacuum-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v1H5a2 2 0 0 0-2 2v7a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-7a2 2 0 0 0-2-2h-2V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v1H9V7zm-3 5h12v5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-5zm3 1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm6 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg></div>
+        <div class="vacuum-info">
+          <h2 id="vacuum-title">Robô aspirador</h2>
+          <div id="vacuum-status" class="muted">Carregando...</div>
+        </div>
+        <div id="vacuum-battery" class="vacuum-battery"></div>
+      </div>
+      <div class="vacuum-section-title">Ações</div>
+      <div id="vacuum-actions" class="vacuum-actions"></div>
+      <div class="vacuum-section-title">Rotinas</div>
+      <div id="vacuum-routines" class="vacuum-routines"></div>
+      <div id="vacuum-empty" class="lights-empty hidden">Nenhuma rotina encontrada.</div>
+      <div class="detail-foot"><span><b>&#9650;&#9660;&#9664;&#9654;</b> navegar</span> &nbsp; <span><b>OK</b> executar</span> &nbsp; <span><b>VOLTAR</b> volta ao menu</span></div>
+    </div>
   </section>
 
   <!-- Detalhe de uma entidade -->
@@ -99,9 +158,9 @@
   <!-- Lista de páginas -->
   <section id="pages" class="screen hidden">
     <div class="panel">
-      <h2>Páginas</h2>
+      <h2>Páginas / ambientes</h2>
       <div id="pages-list" class="pages-list"></div>
-      <div class="detail-foot"><span><b>VERMELHO</b> / <b>VOLTAR</b> fecha</span></div>
+      <div class="detail-foot"><span><b>VOLTAR</b> / <b>VERMELHO</b> volta ao menu</span></div>
     </div>
   </section>
 
